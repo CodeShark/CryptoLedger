@@ -9,7 +9,7 @@ class DBModel
 {
 public:
     DBModel() { }
-    virtual ~DBModel() = 0;
+    virtual ~DBModel() { }
 
     virtual void open(const std::string& dbname) = 0;
     virtual void close() = 0;
