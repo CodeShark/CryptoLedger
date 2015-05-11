@@ -25,8 +25,8 @@ public:
     const bytes_t& leftChildHash() const { return leftChildHash_; }
     const bytes_t& rightChildHash() const { return rightChildHash_; }
 
-    std::shared_ptr<MerkleNode<DBModelType>> getLeftChild() const;
-    std::shared_ptr<MerkleNode<DBModelType>> getRightChild() const;
+    std::shared_ptr<MerkleNode<DBModelType>> getLeftChild(const DBModelType& db) const;
+    std::shared_ptr<MerkleNode<DBModelType>> getRightChild(const DBModelType& db) const;
 
     void setData(const bytes_t& data);
     void setLeftChildHash(const bytes_t& leftChildHash);
@@ -70,15 +70,23 @@ void MerkleNode<DBModelType>::setRightChildHash(const bytes_t& rightChildHash)
 }
 
 template<typename DBModelType>
-std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getLeftChild() const
+std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getLeftChild(const DBModelType& db) const
 {
-    return nullptr;
+    if (leftChildHash_.empty()) throw std::runtime_error("Node does not have a left child.");
+
+    bytes_t serialized;
+    db.get(leftChildHash_, serialized);
+    return std::make_shared<MerkleNode<DBModelType>>(serialized);
 }
 
 template<typename DBModelType>
-std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getRightChild() const
+std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getRightChild(const DBModelType& db) const
 {
-    return nullptr;
+    if (rightChildHash_.empty()) throw std::runtime_error("Node does not have a right child.");
+
+    bytes_t serialized;
+    db.get(rightChildHash_, serialized);
+    return std::make_shared<MerkleNode<DBModelType>>(serialized);
 }
 
 template<typename DBModelType>
