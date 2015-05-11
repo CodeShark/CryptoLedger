@@ -12,7 +12,7 @@ namespace HashTrie
 {
 
 template<typename DBModelType>
-class MerkleNode
+class MerkleNode : std::enable_shared_from_this<MerkleNode<DBModelType>>
 {
 public:
     MerkleNode() : size_(0) { }
