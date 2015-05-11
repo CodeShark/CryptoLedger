@@ -5,28 +5,34 @@
 
 #include <stdutils/uchar_vector.h>
 
+#include <memory>
 #include <stdexcept>
 
 namespace HashTrie
 {
 
+template<typename DBModelType>
 class MerkleNode
 {
 public:
-    MerkleNode() { }
+    MerkleNode() : size_(0) { }
     explicit MerkleNode(const bytes_t& serialized) { setSerialized(serialized); }
 
     const bytes_t& hash() const { return hash_; }
     const bytes_t& data() const { return data_; }
+    const uint64_t& size() const { return size_; }
 
     const bytes_t& leftChildHash() const { return leftChildHash_; }
     const bytes_t& rightChildHash() const { return rightChildHash_; }
+
+    std::shared_ptr<MerkleNode<DBModelType>> getLeftChild() const;
+    std::shared_ptr<MerkleNode<DBModelType>> getRightChild() const;
 
     void setData(const bytes_t& data);
     void setLeftChildHash(const bytes_t& leftChildHash);
     void setRightChildHash(const bytes_t& rightChildHash);
 
-    bool isLeaf() const { return (leftChildHash_.empty() && rightChildHash_.empty()); }
+    bool isLeaf() const { return (size_ == 1); }
 
     bytes_t getSerialized() const;
     void setSerialized(const bytes_t& serialized);
@@ -34,6 +40,7 @@ public:
 private:
     bytes_t hash_;
     bytes_t data_;
+    uint64_t size_;
 
     bytes_t leftChildHash_;
     bytes_t rightChildHash_;
@@ -41,28 +48,54 @@ private:
     void updateHash();
 };
 
-void MerkleNode::setData(const bytes_t& data)
+template<typename DBModelType>
+void MerkleNode<DBModelType>::setData(const bytes_t& data)
 {
     data_ = data;
     updateHash();
 }
 
-void MerkleNode::setLeftChildHash(const bytes_t& leftChildHash)
+template<typename DBModelType>
+void MerkleNode<DBModelType>::setLeftChildHash(const bytes_t& leftChildHash)
 {
     leftChildHash_ = leftChildHash;
     updateHash();
 }
 
-void MerkleNode::setRightChildHash(const bytes_t& rightChildHash)
+template<typename DBModelType>
+void MerkleNode<DBModelType>::setRightChildHash(const bytes_t& rightChildHash)
 {
     rightChildHash_ = rightChildHash;
     updateHash();
 }
 
-bytes_t MerkleNode::getSerialized() const
+template<typename DBModelType>
+std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getLeftChild() const
+{
+    return nullptr;
+}
+
+template<typename DBModelType>
+std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getRightChild() const
+{
+    return nullptr;
+}
+
+template<typename DBModelType>
+bytes_t MerkleNode<DBModelType>::getSerialized() const
 {
     uchar_vector rval;
     uint32_t len;
+
+    // TODO: More compact encoding
+    rval.push_back(size_ >> 56);
+    rval.push_back((size_ >> 48) & 0xff);
+    rval.push_back((size_ >> 40) & 0xff);
+    rval.push_back((size_ >> 32) & 0xff);
+    rval.push_back((size_ >> 24) & 0xff);
+    rval.push_back((size_ >> 16) & 0xff);
+    rval.push_back((size_ >> 8) & 0xff);
+    rval.push_back(size_ & 0xff);
 
     len = leftChildHash_.size();
     rval.push_back(len >> 24);
@@ -88,12 +121,18 @@ bytes_t MerkleNode::getSerialized() const
     return rval;
 }
 
-void MerkleNode::setSerialized(const bytes_t& serialized)
+template<typename DBModelType>
+void MerkleNode<DBModelType>::setSerialized(const bytes_t& serialized)
 {
     uint32_t len;
     uint32_t pos = 0;
 
-    if (serialized.size() < 4) throw std::runtime_error("Invalid merkle node serialization");
+    if (serialized.size() < 8) throw std::runtime_error("Invalid merkle node serialization");
+    size_ = ((uint64_t)serialized[pos] << 56) | ((uint64_t)serialized[pos + 1] << 48) | ((uint64_t)serialized[pos + 2] << 40) | ((uint64_t)serialized[pos + 3] << 32)
+          | ((uint64_t)serialized[pos + 4] << 24) | ((uint64_t)serialized[pos + 5] << 16) | ((uint64_t)serialized[pos + 6] << 8) | ((uint64_t)serialized[pos + 7]);
+    pos += 8;
+
+    if (serialized.size() < pos + 4) throw std::runtime_error("Invalid merkle node serialization");
     len = ((uint32_t)serialized[pos] << 24) | ((uint32_t)serialized[pos + 1] << 16) | ((uint32_t)serialized[pos + 2] << 8) | ((uint32_t)serialized[pos + 3]);
     pos += 4;
     if (serialized.size() < pos + len) throw std::runtime_error("Invalid merkle node serialization");
@@ -119,7 +158,8 @@ void MerkleNode::setSerialized(const bytes_t& serialized)
     updateHash();
 }
 
-void MerkleNode::updateHash()
+template<typename DBModelType>
+void MerkleNode<DBModelType>::updateHash()
 {
     uchar_vector m;
     m += leftChildHash_;
