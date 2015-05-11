@@ -3,7 +3,8 @@ INCLUDE_PATH += -Isrc
 include mk/os.mk mk/cxx_flags.mk
 
 LIBS = \
-    -lleveldb
+    -lleveldb \
+    -lcrypto
 
 OBJS = \
     obj/LevelDBModel.o

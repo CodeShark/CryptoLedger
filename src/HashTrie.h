@@ -7,7 +7,7 @@
 
 #include <stdexcept>
 
-namespace MMRTree
+namespace HashTrie
 {
 
 class MerkleNode

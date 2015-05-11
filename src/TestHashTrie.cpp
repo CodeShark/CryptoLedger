@@ -8,6 +8,6 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    HashTrie<LevelDBModel> hashTrie("roar");
+    MMRTree<LevelDBModel> tree("roar");
     return 0;
 }
