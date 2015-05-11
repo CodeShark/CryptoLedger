@@ -26,10 +26,9 @@ public:
     void setLeftChildHash(const bytes_t& leftChildHash);
     void setRightChildHash(const bytes_t& rightChildHash);
 
-    bool isLeaf() const { return (leftChild_.empty() && rightChild_.empty()); }
+    bool isLeaf() const { return (leftChildHash_.empty() && rightChildHash_.empty()); }
 
-    bytes_t serialized() const;
-
+    bytes_t getSerialized() const;
     void setSerialized(const bytes_t& serialized);
 
 private:
@@ -41,11 +40,6 @@ private:
 
     void updateHash();
 };
-
-const bytes_t& MerkleNode::hash() const
-{
-    return hash_;
-}
 
 void MerkleNode::setData(const bytes_t& data)
 {
@@ -65,36 +59,36 @@ void MerkleNode::setRightChildHash(const bytes_t& rightChildHash)
     updateHash();
 }
 
-bytes_t MerkleNode::serialized() const
+bytes_t MerkleNode::getSerialized() const
 {
     uchar_vector rval;
     uint32_t len;
 
     len = leftChildHash_.size();
     rval.push_back(len >> 24);
-    rval.push_back((len >> 16) && 0xff);
-    rval.push_back((len >> 8) && 0xff);
-    rval.push_back(len && 0xff);
+    rval.push_back((len >> 16) & 0xff);
+    rval.push_back((len >> 8) & 0xff);
+    rval.push_back(len & 0xff);
     rval += leftChildHash_;
 
     len = data_.size();
     rval.push_back(len >> 24);
-    rval.push_back((len >> 16) && 0xff);
-    rval.push_back((len >> 8) && 0xff);
-    rval.push_back(len && 0xff);
+    rval.push_back((len >> 16) & 0xff);
+    rval.push_back((len >> 8) & 0xff);
+    rval.push_back(len & 0xff);
     rval += data_;
 
     len = rightChildHash_.size();
     rval.push_back(len >> 24);
-    rval.push_back((len >> 16) && 0xff);
-    rval.push_back((len >> 8) && 0xff);
-    rval.push_back(len && 0xff);
+    rval.push_back((len >> 16) & 0xff);
+    rval.push_back((len >> 8) & 0xff);
+    rval.push_back(len & 0xff);
     rval += rightChildHash_;
 
     return rval;
 }
 
-void MerkleNode::setSerialied(const bytes_t& serialized)
+void MerkleNode::setSerialized(const bytes_t& serialized)
 {
     uint32_t len;
     uint32_t pos = 0;
@@ -141,11 +135,11 @@ public:
     MMRTree(const std::string& dbname);
     ~MMRTree() { dbModel_.close(); }
 
-    const KeyType& rootHash() const { return rootHash_; } 
+    const bytes_t& rootHash() const { return rootHash_; }
 
 private:
     DBModelType dbModel_;
-    KeyType rootHash_;
+    bytes_t rootHash_;
 };
 
 
