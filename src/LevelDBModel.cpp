@@ -55,3 +55,27 @@ void LevelDBModel::get(const bytes_t& key, bytes_t& value) const
 
     value.assign(strvalue.begin(), strvalue.end());
 }
+
+void LevelDBModel::batchInsert(const bytes_t& key, const bytes_t& value)
+{
+    updates_.Put(Slice(string(reinterpret_cast<const char*>(&key[0]), key.size())), Slice(string(reinterpret_cast<const char*>(&value[0]), value.size())));
+}
+
+void LevelDBModel::batchRemove(const bytes_t& key)
+{
+    updates_.Delete(Slice(string(reinterpret_cast<const char*>(&key[0]), key.size())));
+}
+
+void LevelDBModel::commit()
+{
+    if (!db_) throw runtime_error("DB is not open.");
+
+    Status status = db_->Write(WriteOptions(), &updates_);
+    if (!status.ok()) throw runtime_error(status.ToString()); 
+}
+
+void LevelDBModel::rollback()
+{
+    updates_.Clear();
+}
+

@@ -3,6 +3,7 @@
 #include "DBModel.h"
 
 #include <leveldb/db.h>
+#include <leveldb/write_batch.h>
 
 #include <stdexcept>
 
@@ -23,8 +24,15 @@ public:
     void remove(const bytes_t& key);
     void get(const bytes_t& key, bytes_t& value) const;
 
+    void batchInsert(const bytes_t& key, const bytes_t& value);
+    void batchRemove(const bytes_t& key);
+
+    void commit();
+    void rollback();
+
 private:
     leveldb::DB* db_;
+    leveldb::WriteBatch updates_;
 };
 
 }
