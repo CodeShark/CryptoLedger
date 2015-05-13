@@ -23,6 +23,7 @@ class MerkleNode : std::enable_shared_from_this<MerkleNode<DBModelType>>
 public:
     MerkleNode() : size_(1) { }
     explicit MerkleNode(const bytes_t& serialized) { setSerialized(serialized); }
+    MerkleNode(const MerkleNode<DBModelType>& leftChild, const MerkleNode<DBModelType>& rightChild);
 
     const bytes_t& hash() const { return hash_; }
     const bytes_t& data() const { return data_; }
@@ -38,6 +39,7 @@ public:
     void setLeftChildHash(const bytes_t& leftChildHash);
     void setRightChildHash(const bytes_t& rightChildHash);
     void save(DBModelType& db);
+    void erase(DBModelType& db);
 
     bool isLeaf() const { return (size_ == 1); }
     bool isPerfect() const { return (/*(size_ != 0) &&*/ ((size_ & (~size_ + 1)) == size_)); } // size_ is a power of 2, size cannot be zero
@@ -46,6 +48,7 @@ public:
     void setSerialized(const bytes_t& serialized);
 
     MerkleNodePtr<DBModelType> appendItem(const bytes_t& data, DBModelType& db);
+    MerkleNodePtr<DBModelType> appendTree(const MerkleNode<DBModelType>& root, DBModelType& db);
 
 private:
     bytes_t hash_;
@@ -57,6 +60,15 @@ private:
 
     void updateHash();
 };
+
+template<typename DBModelType>
+MerkleNode<DBModelType>::MerkleNode(const MerkleNode<DBModelType>& leftChild, const MerkleNode<DBModelType>& rightChild)
+{
+    size_ = leftChild.size() + rightChild.size();
+    leftChildHash_ = leftChild.hash();
+    rightChildHash_ = rightChild.hash();
+    updateHash();
+}
 
 template<typename DBModelType>
 void MerkleNode<DBModelType>::setData(const bytes_t& data)
@@ -84,6 +96,12 @@ void MerkleNode<DBModelType>::save(DBModelType& db)
 {
     bytes_t serialized = getSerialized();
     db.insert(hash_, serialized);
+}
+
+template<typename DBModelType>
+void MerkleNode<DBModelType>::erase(DBModelType& db)
+{
+    db.remove(hash_);
 }
 
 template<typename DBModelType>
@@ -186,28 +204,62 @@ void MerkleNode<DBModelType>::setSerialized(const bytes_t& serialized)
 template<typename DBModelType>
 MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendItem(const bytes_t& data, DBModelType& db)
 {
-    if (size_ & 0x1)
+    MerkleNode newRightChild;
+    newRightChild.setData(data);
+    newRightChild.save(db);
+
+    if (size_ == 1)
+    {
+        return std::make_shared<MerkleNode<DBModelType>>(*this, newRightChild);
+    }
+    else if (size_ & 0x1)
     {
         // size is odd, append to right child and merge into left child if possible
-        //std::shared_ptr<Merkle 
+        MerkleNodePtr<DBModelType> rightChild = getRightChild(db);
+        rightChild = rightChild->appendItem(data, db);
+        return getLeftChild(db)->appendTree(rightChild, db);
     }     
     else
     {
         // size is even, create new root with this for left child and new item for right child
-        MerkleNode newRightChild;
-        newRightChild.setData(data);
-        newRightChild.save(db);
-
-        MerkleNodePtr<DBModelType> newRoot = std::make_shared<MerkleNode<DBModelType>>();
-        newRoot->size_ = size_ + 1;
-        newRoot->leftChildHash_ = hash_;
-        newRoot->rightChildHash_ = newRightChild.hash();
-        newRoot->updateHash();
-        newRoot->save();
+        MerkleNodePtr<DBModelType> newRoot = std::make_shared<MerkleNode<DBModelType>>(*this, newRightChild);
+        newRoot->save(db);
         return newRoot;
     }
 }
 
+template<typename DBModelType>
+MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendTree(const MerkleNode<DBModelType>& root, DBModelType& db)
+{
+    if (size_ < root->size()) throw std::runtime_error("Cannot merge larger tree into smaller one.");
+
+    if (!(size_ & root->size()))
+    {
+        // No trees of same size, just append tree as new right child
+        MerkleNodePtr<DBModelType> newRoot = std::make_shared<MerkleNode<DBModelType>>(*this, root);
+        newRoot->save(db);
+        return newRoot;
+    }
+    else if (size_ == root->size())
+    {
+        if (!isPerfect()) throw std::runtime_error("Cannot merge into nonperfect tree.");
+
+        MerkleNodePtr<DBModelType> newRoot = std::make_shared<MerkleNode<DBModelType>>(*this, root);
+        newRoot->save(db);
+        return newRoot;
+    }
+    else
+    {
+        // Recurse on right side
+        MerkleNodePtr<DBModelType> newRoot = getRightChild(db)->appendTree(root, db);
+
+        // Recurse on left side
+        newRoot = getLeftChild(db)->appendTree(*newRoot, db);
+
+        erase(db); // the original tree root is removed 
+        return newRoot;
+    }
+}
 
 
 template<typename DBModelType>
