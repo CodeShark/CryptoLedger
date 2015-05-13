@@ -8,17 +8,23 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
+/*
     if (argc != 2)
     {
         cerr << "# Usage: " << argv[0] << " <hex data>" << endl;
         return -1;
     }
+*/
 
     try
     {
         MMRTree<LevelDBModel> tree("TestTree");
 
-        tree.appendItem(uchar_vector(argv[1]));
+        if (argc > 1)
+        {
+            tree.appendItem(uchar_vector(argv[1]));
+        }
+
         cout << tree.json() << endl;
     }
     catch (const exception& e)

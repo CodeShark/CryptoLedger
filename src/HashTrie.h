@@ -313,7 +313,7 @@ MMRTree<DBModelType>::MMRTree(const std::string& dbname)
 
         bytes_t serialized;
         db_.get(rootHash, serialized);
-        root_->setSerialized(serialized);
+        root_ = std::make_shared<MerkleNode<DBModelType>>(serialized);
     }
     catch (...)
     {
@@ -326,7 +326,8 @@ void MMRTree<DBModelType>::appendItem(const bytes_t& data)
 {
     if (root_)
     {
-        root_->appendItem(data, db_);
+        root_ = root_->appendItem(data, db_);
+        db_.insert(bytes_t(), root_->hash());
     }
     else
     {
@@ -344,15 +345,15 @@ std::string MMRTree<DBModelType>::json(const MerkleNodePtr<DBModelType>& root) c
 
     std::stringstream ss;
     ss << "{";
-    ss << "hash:" << uchar_vector(root->hash()).getHex() << ",";
+    ss << "\"hash\":\"" << uchar_vector(root->hash()).getHex() << "\",";
     if (root->isLeaf())
     {
-        ss << "data:" << uchar_vector(root->data()).getHex();
+        ss << "\"data\":\"" << uchar_vector(root->data()).getHex() << "\"";
     }
     else
     {
-        ss << "left:" << json(root->getLeftChild(db_)) << ","
-           << "right:" << json(root->getRightChild(db_));
+        ss << "\"left\":" << json(root->getLeftChild(db_)) << ","
+           << "\"right\":" << json(root->getRightChild(db_));
     }
     ss << "}";
 
