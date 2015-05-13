@@ -12,6 +12,8 @@
 namespace HashTrie
 {
 
+const bytes_t EMPTY_BYTES;
+
 template<typename DBModelType>
 class MerkleNode;
 
@@ -311,7 +313,7 @@ public:
     ~MMRTree() { db_.close(); }
 
     const MerkleNodePtr<DBModelType>& root() const { return root_; }
-    const bytes_t& rootHash() const { return root_ ? root_->hash() : bytes_t(); }
+    const bytes_t& rootHash() const { return root_ ? root_->hash() : EMPTY_BYTES; }
     uint64_t size() const { return root_ ? root_->size() : 0; }
 
     void appendItem(const bytes_t& data);

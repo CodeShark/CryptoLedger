@@ -22,7 +22,8 @@ int main(int argc, char* argv[])
 
         if (argc > 1)
         {
-            tree.appendItem(uchar_vector(argv[1]));
+            if (string(argv[1]) == "-") { tree.removeItem(); }
+            else                        { tree.appendItem(uchar_vector(argv[1])); }
         }
 
         cout << tree.json() << endl;
