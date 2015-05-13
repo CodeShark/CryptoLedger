@@ -49,7 +49,7 @@ public:
     void setSerialized(const bytes_t& serialized);
 
     MerkleNodePtr<DBModelType> appendItem(const bytes_t& data, DBModelType& db);
-    MerkleNodePtr<DBModelType> appendTree(const MerkleNode<DBModelType>& root, DBModelType& db);
+    MerkleNodePtr<DBModelType> removeItem(DBModelType& db);
 
 private:
     bytes_t hash_;
@@ -58,6 +58,8 @@ private:
 
     bytes_t leftChildHash_;
     bytes_t rightChildHash_;
+
+    MerkleNodePtr<DBModelType> appendTree(const MerkleNode<DBModelType>& root, DBModelType& db);
 
     void updateHash();
 };
@@ -266,6 +268,30 @@ MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendTree(const MerkleNode<
     }
 }
 
+template<typename DBModelType>
+MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::removeItem(DBModelType& db)
+{
+    if (isLeaf())
+    {
+        erase(db);
+        return nullptr;
+    }
+
+    erase(db);
+    MerkleNodePtr<DBModelType> leftChild = getLeftChild(db);
+    MerkleNodePtr<DBModelType> rightChild = getRightChild(db);
+    while (rightChild->size() != 1)
+    {
+
+        leftChild = std::make_shared<MerkleNode<DBModelType>>(*leftChild, *rightChild->getLeftChild(db));
+        leftChild->save(db);
+
+        rightChild = rightChild->getRightChild(db);
+        rightChild->erase(db);
+    }
+
+    return leftChild;
+}
 
 template<typename DBModelType>
 void MerkleNode<DBModelType>::updateHash()
@@ -289,6 +315,7 @@ public:
     uint64_t size() const { return root_ ? root_->size() : 0; }
 
     void appendItem(const bytes_t& data);
+    void removeItem();
 
     std::string json(const MerkleNodePtr<DBModelType>& root) const;
     std::string json() const { return json(root_); }
@@ -334,6 +361,15 @@ void MMRTree<DBModelType>::appendItem(const bytes_t& data)
         root_->save(db_);
         db_.insert(bytes_t(), root_->hash());
     }
+}
+
+template<typename DBModelType>
+void MMRTree<DBModelType>::removeItem()
+{
+    if (!root_) throw std::runtime_error("Tree is empty.");
+
+    root_ = root_->removeItem(db_);
+    db_.insert(bytes_t(), rootHash());
 }
 
 template<typename DBModelType>
