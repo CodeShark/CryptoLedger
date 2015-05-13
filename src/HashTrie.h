@@ -6,6 +6,7 @@
 #include <stdutils/uchar_vector.h>
 
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 
 namespace HashTrie
@@ -291,7 +292,8 @@ public:
 
     void appendItem(const bytes_t& data);
 
-    std::string json() const;
+    static std::string json(const MerkleNodePtr<DBModelType>& root);
+    std::string json() const { return json(root_); }
 
 private:
     DBModelType db_;
@@ -333,6 +335,28 @@ void MMRTree<DBModelType>::appendItem(const bytes_t& data)
         root_.save(db_);
         db_.insert(bytes_t(), root_.hash());
     }
+}
+
+template<typename DBModelType>
+std::string MMRTree<DBModelType>::json(const MerkleNodePtr<DBModelType>& root)
+{
+    if (!root) return "null";
+
+    std::stringstream ss;
+    ss << "{";
+    ss << "hash:" << uchar_vector(root->hash()).getHex() << ",";
+    if (root->isLeaf())
+    {
+        ss << "data:" << uchar_vector(root->getData()).getHex();
+    }
+    else
+    {
+        ss << "left:" << json(root->getLeftChild()) << ","
+           << "right:" << json(root->getRightChild());
+    }
+    ss << "}";
+
+    return ss.str();
 }
 
 }
