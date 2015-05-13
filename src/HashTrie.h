@@ -19,7 +19,7 @@ template<typename DBModelType>
 using MerkleNodePtr = std::shared_ptr<MerkleNode<DBModelType>>;
 
 template<typename DBModelType>
-class MerkleNode : std::enable_shared_from_this<MerkleNode<DBModelType>>
+class MerkleNode
 {
 public:
     MerkleNode() : size_(1) { }
@@ -224,7 +224,7 @@ MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendItem(const bytes_t& da
         rightChild->save(db);
 
         erase(db);
-        return getLeftChild(db)->appendTree(rightChild, db);
+        return getLeftChild(db)->appendTree(*rightChild, db);
     }     
     else
     {
@@ -238,16 +238,16 @@ MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendItem(const bytes_t& da
 template<typename DBModelType>
 MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendTree(const MerkleNode<DBModelType>& root, DBModelType& db)
 {
-    if (size_ < root->size()) throw std::runtime_error("Cannot merge larger tree into smaller one.");
+    if (size_ < root.size()) throw std::runtime_error("Cannot merge larger tree into smaller one.");
 
-    if (!(size_ & root->size()))
+    if (!(size_ & root.size()))
     {
         // No trees of same size, just append tree as new right child
         MerkleNodePtr<DBModelType> newRoot = std::make_shared<MerkleNode<DBModelType>>(*this, root);
         newRoot->save(db);
         return newRoot;
     }
-    else if (size_ == root->size())
+    else if (size_ == root.size())
     {
         if (!isPerfect()) throw std::runtime_error("Cannot merge into nonperfect tree.");
 
@@ -292,7 +292,7 @@ public:
 
     void appendItem(const bytes_t& data);
 
-    static std::string json(const MerkleNodePtr<DBModelType>& root);
+    std::string json(const MerkleNodePtr<DBModelType>& root) const;
     std::string json() const { return json(root_); }
 
 private:
@@ -331,14 +331,14 @@ void MMRTree<DBModelType>::appendItem(const bytes_t& data)
     else
     {
         root_ = std::make_shared<MerkleNode<DBModelType>>();
-        root_.setData(data);
-        root_.save(db_);
-        db_.insert(bytes_t(), root_.hash());
+        root_->setData(data);
+        root_->save(db_);
+        db_.insert(bytes_t(), root_->hash());
     }
 }
 
 template<typename DBModelType>
-std::string MMRTree<DBModelType>::json(const MerkleNodePtr<DBModelType>& root)
+std::string MMRTree<DBModelType>::json(const MerkleNodePtr<DBModelType>& root) const
 {
     if (!root) return "null";
 
@@ -347,12 +347,12 @@ std::string MMRTree<DBModelType>::json(const MerkleNodePtr<DBModelType>& root)
     ss << "hash:" << uchar_vector(root->hash()).getHex() << ",";
     if (root->isLeaf())
     {
-        ss << "data:" << uchar_vector(root->getData()).getHex();
+        ss << "data:" << uchar_vector(root->data()).getHex();
     }
     else
     {
-        ss << "left:" << json(root->getLeftChild()) << ","
-           << "right:" << json(root->getRightChild());
+        ss << "left:" << json(root->getLeftChild(db_)) << ","
+           << "right:" << json(root->getRightChild(db_));
     }
     ss << "}";
 
