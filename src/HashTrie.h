@@ -15,7 +15,7 @@ template<typename DBModelType>
 class MerkleNode : std::enable_shared_from_this<MerkleNode<DBModelType>>
 {
 public:
-    MerkleNode() : size_(0) { }
+    MerkleNode() : size_(1) { }
     explicit MerkleNode(const bytes_t& serialized) { setSerialized(serialized); }
 
     const bytes_t& hash() const { return hash_; }
@@ -31,11 +31,15 @@ public:
     void setData(const bytes_t& data);
     void setLeftChildHash(const bytes_t& leftChildHash);
     void setRightChildHash(const bytes_t& rightChildHash);
+    void save(DBModelType& db);
 
     bool isLeaf() const { return (size_ == 1); }
+    bool isPerfect() const { return (/*(size_ != 0) &&*/ ((size_ & (~size_ + 1)) == size_)); } // size_ is a power of 2, size cannot be zero
 
     bytes_t getSerialized() const;
     void setSerialized(const bytes_t& serialized);
+
+    std::shared_ptr<MerkleNode<DBModelType>> appendItem(const bytes_t& data, DBModelType& db);
 
 private:
     bytes_t hash_;
@@ -67,6 +71,13 @@ void MerkleNode<DBModelType>::setRightChildHash(const bytes_t& rightChildHash)
 {
     rightChildHash_ = rightChildHash;
     updateHash();
+}
+
+template<typename DBModelType>
+void MerkleNode<DBModelType>::save(DBModelType& db)
+{
+    bytes_t serialized = getSerialized();
+    db.insert(hash_, serialized);
 }
 
 template<typename DBModelType>
@@ -165,6 +176,32 @@ void MerkleNode<DBModelType>::setSerialized(const bytes_t& serialized)
 
     updateHash();
 }
+
+template<typename DBModelType>
+std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::appendItem(const bytes_t& data, DBModelType& db)
+{
+    if (size_ & 0x1)
+    {
+        // size is odd
+    }     
+    else
+    {
+        // size is even
+        MerkleNode newRightChild;
+        newRightChild.setData(data);
+        newRightChild.save(db);
+
+        std::shared_ptr<MerkleNode<DBModelType>> newRoot = std::make_shared<MerkleNode<DBModelType>>();
+        newRoot->size_ = size_ + 1;
+        newRoot->leftChildHash_ = hash_;
+        newRoot->rightChildHash_ = newRightChild.hash();
+        newRoot->updateHash();
+        newRoot->save();
+        return newRoot;
+    }
+}
+
+
 
 template<typename DBModelType>
 void MerkleNode<DBModelType>::updateHash()
