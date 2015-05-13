@@ -345,7 +345,8 @@ std::string MMRTree<DBModelType>::json(const MerkleNodePtr<DBModelType>& root) c
 
     std::stringstream ss;
     ss << "{";
-    ss << "\"hash\":\"" << uchar_vector(root->hash()).getHex() << "\",";
+    ss << "\"size\":" << root->size() << ","
+       << "\"hash\":\"" << uchar_vector(root->hash()).getHex() << "\",";
     if (root->isLeaf())
     {
         ss << "\"data\":\"" << uchar_vector(root->data()).getHex() << "\"";
