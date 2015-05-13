@@ -219,11 +219,8 @@ MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendItem(const bytes_t& da
     {
         // size is odd, append to right child and merge into left child if possible
         MerkleNodePtr<DBModelType> rightChild = getRightChild(db);
-        rightChild->erase(db);
         rightChild = rightChild->appendItem(data, db);
-        rightChild->save(db);
-
-        erase(db);
+        erase(db); // This node no longer exists
         return getLeftChild(db)->appendTree(*rightChild, db);
     }     
     else
@@ -257,13 +254,14 @@ MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendTree(const MerkleNode<
     }
     else
     {
+        erase(db); // the original tree root is removed 
+
         // Recurse on right side
         MerkleNodePtr<DBModelType> newRoot = getRightChild(db)->appendTree(root, db);
 
         // Recurse on left side
         newRoot = getLeftChild(db)->appendTree(*newRoot, db);
 
-        erase(db); // the original tree root is removed 
         return newRoot;
     }
 }
