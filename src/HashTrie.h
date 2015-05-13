@@ -210,13 +210,19 @@ MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendItem(const bytes_t& da
 
     if (size_ == 1)
     {
-        return std::make_shared<MerkleNode<DBModelType>>(*this, newRightChild);
+        MerkleNodePtr<DBModelType> newRoot = std::make_shared<MerkleNode<DBModelType>>(*this, newRightChild);
+        newRoot->save(db);
+        return newRoot;
     }
     else if (size_ & 0x1)
     {
         // size is odd, append to right child and merge into left child if possible
         MerkleNodePtr<DBModelType> rightChild = getRightChild(db);
+        rightChild->erase(db);
         rightChild = rightChild->appendItem(data, db);
+        rightChild->save(db);
+
+        erase(db);
         return getLeftChild(db)->appendTree(rightChild, db);
     }     
     else
