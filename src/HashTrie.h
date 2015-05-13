@@ -283,28 +283,55 @@ class MMRTree
 {
 public:
     MMRTree(const std::string& dbname);
-    ~MMRTree() { dbModel_.close(); }
+    ~MMRTree() { db_.close(); }
 
-    const bytes_t& rootHash() const { return rootHash_; }
+    const MerkleNodePtr<DBModelType>& root() const { return root_; }
+    const bytes_t& rootHash() const { return root_ ? root_->hash() : bytes_t(); }
+    uint64_t size() const { return root_ ? root_->size() : 0; }
+
+    void appendItem(const bytes_t& data);
+
+    std::string json() const;
 
 private:
-    DBModelType dbModel_;
-    bytes_t rootHash_;
+    DBModelType db_;
+    MerkleNodePtr<DBModelType> root_;
 };
 
 
 template<typename DBModelType>
 MMRTree<DBModelType>::MMRTree(const std::string& dbname)
 {
-    dbModel_.open(dbname);
+    db_.open(dbname);
     try
     {
-        dbModel_.get(bytes_t(), rootHash_);
+        bytes_t rootHash;
+        db_.get(bytes_t(), rootHash);
+        if (rootHash.empty()) return;
+
+        bytes_t serialized;
+        db_.get(rootHash, serialized);
+        root_->setSerialized(serialized);
     }
     catch (...)
     {
-        rootHash_.clear();
-        dbModel_.insert(bytes_t(), rootHash_);
+        db_.insert(bytes_t(), bytes_t());
+    }
+}
+
+template<typename DBModelType>
+void MMRTree<DBModelType>::appendItem(const bytes_t& data)
+{
+    if (root_)
+    {
+        root_->appendItem(data, db_);
+    }
+    else
+    {
+        root_ = std::make_shared<MerkleNode<DBModelType>>();
+        root_.setData(data);
+        root_.save(db_);
+        db_.insert(bytes_t(), root_.hash());
     }
 }
 
