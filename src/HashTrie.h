@@ -12,6 +12,12 @@ namespace HashTrie
 {
 
 template<typename DBModelType>
+class MerkleNode;
+
+template<typename DBModelType>
+using MerkleNodePtr = std::shared_ptr<MerkleNode<DBModelType>>;
+
+template<typename DBModelType>
 class MerkleNode : std::enable_shared_from_this<MerkleNode<DBModelType>>
 {
 public:
@@ -25,8 +31,8 @@ public:
     const bytes_t& leftChildHash() const { return leftChildHash_; }
     const bytes_t& rightChildHash() const { return rightChildHash_; }
 
-    std::shared_ptr<MerkleNode<DBModelType>> getLeftChild(const DBModelType& db) const;
-    std::shared_ptr<MerkleNode<DBModelType>> getRightChild(const DBModelType& db) const;
+    MerkleNodePtr<DBModelType> getLeftChild(const DBModelType& db) const;
+    MerkleNodePtr<DBModelType> getRightChild(const DBModelType& db) const;
 
     void setData(const bytes_t& data);
     void setLeftChildHash(const bytes_t& leftChildHash);
@@ -39,7 +45,7 @@ public:
     bytes_t getSerialized() const;
     void setSerialized(const bytes_t& serialized);
 
-    std::shared_ptr<MerkleNode<DBModelType>> appendItem(const bytes_t& data, DBModelType& db);
+    MerkleNodePtr<DBModelType> appendItem(const bytes_t& data, DBModelType& db);
 
 private:
     bytes_t hash_;
@@ -81,7 +87,7 @@ void MerkleNode<DBModelType>::save(DBModelType& db)
 }
 
 template<typename DBModelType>
-std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getLeftChild(const DBModelType& db) const
+MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::getLeftChild(const DBModelType& db) const
 {
     if (leftChildHash_.empty()) throw std::runtime_error("Node does not have a left child.");
 
@@ -91,7 +97,7 @@ std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getLeftChild(c
 }
 
 template<typename DBModelType>
-std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::getRightChild(const DBModelType& db) const
+MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::getRightChild(const DBModelType& db) const
 {
     if (rightChildHash_.empty()) throw std::runtime_error("Node does not have a right child.");
 
@@ -178,20 +184,21 @@ void MerkleNode<DBModelType>::setSerialized(const bytes_t& serialized)
 }
 
 template<typename DBModelType>
-std::shared_ptr<MerkleNode<DBModelType>> MerkleNode<DBModelType>::appendItem(const bytes_t& data, DBModelType& db)
+MerkleNodePtr<DBModelType> MerkleNode<DBModelType>::appendItem(const bytes_t& data, DBModelType& db)
 {
     if (size_ & 0x1)
     {
-        // size is odd
+        // size is odd, append to right child and merge into left child if possible
+        //std::shared_ptr<Merkle 
     }     
     else
     {
-        // size is even
+        // size is even, create new root with this for left child and new item for right child
         MerkleNode newRightChild;
         newRightChild.setData(data);
         newRightChild.save(db);
 
-        std::shared_ptr<MerkleNode<DBModelType>> newRoot = std::make_shared<MerkleNode<DBModelType>>();
+        MerkleNodePtr<DBModelType> newRoot = std::make_shared<MerkleNode<DBModelType>>();
         newRoot->size_ = size_ + 1;
         newRoot->leftChildHash_ = hash_;
         newRoot->rightChildHash_ = newRightChild.hash();
