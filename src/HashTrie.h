@@ -310,7 +310,7 @@ class MMRTree
 {
 public:
     MMRTree(const std::string& dbname);
-    ~MMRTree() { db_.close(); }
+    virtual ~MMRTree() { db_.close(); }
 
     const MerkleNodePtr<DBModelType>& root() const { return root_; }
     const bytes_t& rootHash() const { return root_ ? root_->hash() : EMPTY_BYTES; }
@@ -319,16 +319,16 @@ public:
     // Compute path to node with index i. False means left and true means right.
     std::vector<bool> path(uint64_t i) const;
 
-    void appendItem(const bytes_t& data);
-    void removeItem();
+    virtual void appendItem(const bytes_t& data);
+    virtual void removeItem();
 
-    void commit();
-    void rollback();
+    virtual void commit();
+    virtual void rollback();
 
-    std::string json(const MerkleNodePtr<DBModelType>& root) const;
+    virtual std::string json(const MerkleNodePtr<DBModelType>& root) const;
     std::string json() const { return json(root_); }
 
-private:
+protected:
     DBModelType db_;
     MerkleNodePtr<DBModelType> root_;
 };
