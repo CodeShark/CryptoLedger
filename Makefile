@@ -11,7 +11,8 @@ OBJS = \
 
 TESTS = \
     build/leveldbmodel$(EXE_EXT) \
-    build/hashtrie$(EXE_EXT)
+    build/hashtrie$(EXE_EXT) \
+    build/txouttree$(EXE_EXT)
 
 all: lib/libCryptoLedger.a $(TESTS)
 
@@ -22,6 +23,9 @@ build/leveldbmodel$(EXE_EXT): src/TestLevelDBModel.cpp obj/LevelDBModel.o
 	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $< obj/LevelDBModel.o -o $@ $(LIBS)
 
 build/hashtrie$(EXE_EXT): src/TestHashTrie.cpp obj/LevelDBModel.o src/HashTrie.h
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $< obj/LevelDBModel.o -o $@ $(LIBS)
+
+build/txouttree$(EXE_EXT): src/TestTxOutTree.cpp obj/LevelDBModel.o src/TxOutTree.h src/HashTrie.h
 	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $< obj/LevelDBModel.o -o $@ $(LIBS)
 
 lib/libCryptoLedger.a: $(OBJS)

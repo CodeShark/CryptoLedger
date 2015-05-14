@@ -175,7 +175,7 @@ void MerkleNode<DBModelType>::setSerialized(const bytes_t& serialized)
     uint32_t len;
     uint32_t pos = 0;
 
-    if (serialized.size() < 8) throw std::runtime_error("Invalid merkle node serialization");
+    if (serialized.size() < pos + 8) throw std::runtime_error("Invalid merkle node serialization");
     size_ = ((uint64_t)serialized[pos] << 56) | ((uint64_t)serialized[pos + 1] << 48) | ((uint64_t)serialized[pos + 2] << 40) | ((uint64_t)serialized[pos + 3] << 32)
           | ((uint64_t)serialized[pos + 4] << 24) | ((uint64_t)serialized[pos + 5] << 16) | ((uint64_t)serialized[pos + 6] << 8) | ((uint64_t)serialized[pos + 7]);
     pos += 8;
@@ -309,7 +309,7 @@ template<typename DBModelType>
 class MMRTree
 {
 public:
-    MMRTree(const std::string& dbname);
+    explicit MMRTree(const std::string& dbname);
     virtual ~MMRTree() { db_.close(); }
 
     const MerkleNodePtr<DBModelType>& root() const { return root_; }
