@@ -4,8 +4,8 @@
 
 #include <stdutils/uchar_vector.h>
 
+using namespace CryptoLedger;
 using namespace std;
-using namespace HashTrie;
 
 void showHelp(char* progname)
 {

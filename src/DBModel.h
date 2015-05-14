@@ -2,7 +2,7 @@
 
 #include <CoinCore/typedefs.h>
 
-namespace HashTrie
+namespace CryptoLedger
 {
 
 class DBModel

@@ -3,7 +3,7 @@
 #include "HashTrie.h"
 #include "LevelDBModel.h"
 
-using namespace HashTrie;
+using namespace CryptoLedger;
 using namespace std;
 
 void showPath(const vector<bool>& path)

@@ -3,7 +3,7 @@
 using namespace leveldb;
 using namespace std;
 
-using namespace HashTrie;
+using namespace CryptoLedger;
 
 LevelDBModel::~LevelDBModel()
 {

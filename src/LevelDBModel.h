@@ -8,7 +8,7 @@
 #include <map>
 #include <stdexcept>
 
-namespace HashTrie
+namespace CryptoLedger
 {
 
 class LevelDBModel : public DBModel

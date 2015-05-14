@@ -9,7 +9,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace HashTrie
+namespace CryptoLedger
 {
 
 const bytes_t EMPTY_BYTES;
