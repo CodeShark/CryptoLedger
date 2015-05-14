@@ -49,20 +49,30 @@ void LevelDBModel::get(const bytes_t& key, bytes_t& value) const
 {
     if (!db_) throw runtime_error("DB is not open.");
 
-    string strvalue;
-    Status status = db_->Get(ReadOptions(), Slice(string(reinterpret_cast<const char*>(&key[0]), key.size())), &strvalue);
-    if (!status.ok()) throw runtime_error(status.ToString());
+    auto it = insertionMap_.find(key);
+    if (it == insertionMap_.end())
+    {
+        string strvalue;
+        Status status = db_->Get(ReadOptions(), Slice(string(reinterpret_cast<const char*>(&key[0]), key.size())), &strvalue);
+        if (!status.ok()) throw runtime_error(status.ToString());
 
-    value.assign(strvalue.begin(), strvalue.end());
+        value.assign(strvalue.begin(), strvalue.end());
+    }
+    else
+    {
+        value = it->second;
+    }
 }
 
 void LevelDBModel::batchInsert(const bytes_t& key, const bytes_t& value)
 {
+    insertionMap_[key] = value;
     updates_.Put(Slice(string(reinterpret_cast<const char*>(&key[0]), key.size())), Slice(string(reinterpret_cast<const char*>(&value[0]), value.size())));
 }
 
 void LevelDBModel::batchRemove(const bytes_t& key)
 {
+    insertionMap_.erase(key);
     updates_.Delete(Slice(string(reinterpret_cast<const char*>(&key[0]), key.size())));
 }
 
@@ -71,11 +81,14 @@ void LevelDBModel::commit()
     if (!db_) throw runtime_error("DB is not open.");
 
     Status status = db_->Write(WriteOptions(), &updates_);
-    if (!status.ok()) throw runtime_error(status.ToString()); 
+    if (!status.ok()) throw runtime_error(status.ToString());
+
+    insertionMap_.clear();
 }
 
 void LevelDBModel::rollback()
 {
+    insertionMap_.clear();
     updates_.Clear();
 }
 

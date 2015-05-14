@@ -5,6 +5,7 @@
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 
+#include <map>
 #include <stdexcept>
 
 namespace HashTrie
@@ -33,6 +34,7 @@ public:
 private:
     leveldb::DB* db_;
     leveldb::WriteBatch updates_;
+    std::map<bytes_t, bytes_t> insertionMap_;
 };
 
 }
