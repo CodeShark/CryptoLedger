@@ -113,11 +113,36 @@ public:
     explicit TxOutTree(const std::string& dbname) : MMRTree<DBModelType>(dbname) { }
 
     using MMRTree<DBModelType>::appendItem;
-    void appendItem(const TxOutItem& txout) { appendItem(txout.getSerialized()); }
+    void appendItem(const bytes_t& txhash, uint32_t txindex, const TxOutItem& txout);
 
     using MMRTree<DBModelType>::json;
     std::string json(const MerkleNodePtr<DBModelType>& root) const;
 };
+
+template<typename DBModelType>
+void TxOutTree<DBModelType>::appendItem(const bytes_t& txhash, uint32_t txindex, const TxOutItem& txout)
+{
+    // TODO: more compact encoding
+    bytes_t outpoint(txhash);
+    outpoint.push_back(txindex >> 24);
+    outpoint.push_back((txindex >> 16) & 0xff);
+    outpoint.push_back((txindex >> 8) & 0xff);
+    outpoint.push_back(txindex & 0xff);
+
+    uint64_t size = this->size();
+    bytes_t sizebytes;
+    sizebytes.push_back(size >> 56);
+    sizebytes.push_back((size >> 48) & 0xff);
+    sizebytes.push_back((size >> 40) & 0xff);
+    sizebytes.push_back((size >> 32) & 0xff);
+    sizebytes.push_back((size >> 24) & 0xff);
+    sizebytes.push_back((size >> 16) & 0xff);
+    sizebytes.push_back((size >> 8) & 0xff);
+    sizebytes.push_back(size & 0xff); 
+
+    MMRTree<DBModelType>::appendItem(txout.getSerialized());
+    this->db_.batchInsert(outpoint, sizebytes);
+}
 
 template<typename DBModelType>
 std::string TxOutTree<DBModelType>::json(const MerkleNodePtr<DBModelType>& root) const

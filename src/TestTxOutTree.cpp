@@ -38,7 +38,15 @@ int main(int argc, char* argv[])
                 {
                     vector<string> txoutFields;
                     stdutils::explode(string(argv[i]), ',', back_inserter(txoutFields));
-                    tree.appendItem(uchar_vector(argv[i]));
+                    if (txoutFields.size() != 7) throw runtime_error("Invalid txout.");
+                    uchar_vector txhash(txoutFields[0]);
+                    uint32_t txindex = strtoul(txoutFields[1].c_str(), NULL, 0);
+                    uint32_t version = strtoul(txoutFields[2].c_str(), NULL, 0);
+                    uint64_t height = strtoull(txoutFields[3].c_str(), NULL, 0);
+                    bool isCoinBase = (txoutFields[4] == "true");
+                    bool isSpent = (txoutFields[5] == "true");
+                    uchar_vector script(txoutFields[6]);
+                    tree.appendItem(txhash, txindex, TxOutItem(version, height, isCoinBase, isSpent, script));
                 }
             }
 
