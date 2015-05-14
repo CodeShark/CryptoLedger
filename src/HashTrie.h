@@ -316,6 +316,9 @@ public:
     const bytes_t& rootHash() const { return root_ ? root_->hash() : EMPTY_BYTES; }
     uint64_t size() const { return root_ ? root_->size() : 0; }
 
+    // Compute path to node with index i. False means left and true means right.
+    std::vector<bool> path(uint64_t i) const;
+
     void appendItem(const bytes_t& data);
     void removeItem();
 
@@ -349,6 +352,76 @@ MMRTree<DBModelType>::MMRTree(const std::string& dbname)
     {
         db_.insert(bytes_t(), bytes_t());
     }
+}
+
+inline uint64_t msb64(uint64_t n)
+{
+    n |= (n >> 1);
+    n |= (n >> 2);
+    n |= (n >> 4);
+    n |= (n >> 8);
+    n |= (n >> 16);
+    n |= (n >> 32);
+    return (n & ~(n >> 1));
+}
+
+inline uint64_t lsb64(uint64_t n)
+{
+    n |= (n << 1);
+    n |= (n << 2);
+    n |= (n << 4);
+    n |= (n << 8);
+    n |= (n << 16);
+    n |= (n << 32);
+    return (n & ~(n << 1));
+}
+
+inline bool isPowerOf2(uint64_t n)
+{
+    return ((n != 0) && ((n & (~n + 1)) == n));
+}
+
+inline bool isNotPowerOf2(uint64_t n)
+{
+    return ((n == 0) || ((n & (~n + 1)) != n));
+}
+
+template<typename DBModelType>
+std::vector<bool> MMRTree<DBModelType>::path(uint64_t i) const
+{
+    uint64_t nleft = size();
+    if (i >= nleft) throw std::runtime_error("Index exceeds tree size.");
+
+    std::vector<bool> rval;
+
+    uint64_t ri = nleft - i - 1; // reverse the index to number from the right
+    uint64_t lsb = lsb64(nleft);
+
+    // Move left for each perfect subtree starting from right.
+    while (ri >= lsb)
+    {
+        rval.push_back(false);
+
+        ri -= lsb;
+        nleft -= lsb;
+        lsb = lsb64(nleft);
+    }
+
+    if (isNotPowerOf2(nleft))
+    {
+        // The item is not in the leftmost perfect subtree. We must move right.
+        rval.push_back(true);
+    }
+
+    // lsb is smaller than ri, so we write the remaining bits.
+    lsb >>= 1;
+    while (lsb > 0)
+    {
+        rval.push_back(!(lsb & ri)); // flip the bits since we're counting down.
+        lsb >>= 1;
+    }
+
+    return rval; 
 }
 
 template<typename DBModelType>
