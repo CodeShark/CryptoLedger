@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 {
     try
     {
-        TxOutTree<LevelDBModel> tree("TestTree");
+        TxOutTree<LevelDBModel> tree("TxOutTree");
 
         if (argc > 1)
         {
