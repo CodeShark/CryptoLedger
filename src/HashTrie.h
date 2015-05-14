@@ -100,13 +100,13 @@ template<typename DBModelType>
 void MerkleNode<DBModelType>::save(DBModelType& db)
 {
     bytes_t serialized = getSerialized();
-    db.insert(hash_, serialized);
+    db.batchInsert(hash_, serialized);
 }
 
 template<typename DBModelType>
 void MerkleNode<DBModelType>::erase(DBModelType& db)
 {
-    db.remove(hash_);
+    db.batchRemove(hash_);
 }
 
 template<typename DBModelType>
@@ -319,6 +319,9 @@ public:
     void appendItem(const bytes_t& data);
     void removeItem();
 
+    void commit();
+    void rollback();
+
     std::string json(const MerkleNodePtr<DBModelType>& root) const;
     std::string json() const { return json(root_); }
 
@@ -354,14 +357,14 @@ void MMRTree<DBModelType>::appendItem(const bytes_t& data)
     if (root_)
     {
         root_ = root_->appendItem(data, db_);
-        db_.insert(bytes_t(), root_->hash());
+        db_.batchInsert(bytes_t(), root_->hash());
     }
     else
     {
         root_ = std::make_shared<MerkleNode<DBModelType>>();
         root_->setData(data);
         root_->save(db_);
-        db_.insert(bytes_t(), root_->hash());
+        db_.batchInsert(bytes_t(), root_->hash());
     }
 }
 
@@ -371,7 +374,19 @@ void MMRTree<DBModelType>::removeItem()
     if (!root_) throw std::runtime_error("Tree is empty.");
 
     root_ = root_->removeItem(db_);
-    db_.insert(bytes_t(), rootHash());
+    db_.batchInsert(bytes_t(), rootHash());
+}
+
+template<typename DBModelType>
+void MMRTree<DBModelType>::commit()
+{
+    db_.commit();
+}
+
+template<typename DBModelType>
+void MMRTree<DBModelType>::rollback()
+{
+    db_.rollback();
 }
 
 template<typename DBModelType>
